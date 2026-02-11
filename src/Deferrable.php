@@ -9,20 +9,14 @@
  * the LICENSE file that was distributed with this source code.
  */
 
-namespace Inertia\Controllers;
-
-use App\Controllers\BaseController;
+namespace Inertia;
 
 /**
- * @psalm-api
+ * Interface for props that can be deferred for async loading.
  */
-class TestController extends BaseController
+interface Deferrable
 {
-    /**
-     * @psalm-api
-     */
-    public function index(): string
-    {
-        return 'ok';
-    }
+    public function shouldDefer(): bool;
+
+    public function group(): string;
 }

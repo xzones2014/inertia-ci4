@@ -1,10 +1,14 @@
 {
-  "name": "fabithub/inertia-ci4",
+  "name": "xzones2014/inertia-ci4",
   "description": "The Codeigniter 4 adapter for inertia.js",
   "license": "MIT",
   "type": "library",
   "version": "0.0.1",
   "authors": [
+    {
+      "name": "Abdul Gafur",
+      "email": "gafur.zones2007@gmail.com"
+    },
     {
       "name": "Krishna Gujjjar",
       "email": "krishnagujjjar@gmail.com"
@@ -12,25 +16,24 @@
   ],
   "require": {
     "php": "^8.1",
-    "codeigniter4/framework": "^4.3"
+    "codeigniter4/framework": "^4.5"
   },
   "require-dev": {
-    "codeigniter/coding-standard": "^1.7",
-    "ergebnis/composer-normalize": "^2.41",
-    "icanhazstring/composer-unused": "^0.8.11",
-    "infection/infection": "^0.27.9",
-    "pestphp/pest": "^2.34",
-    "pestphp/pest-plugin-faker": "^2.0",
+    "codeigniter/coding-standard": "^1.8",
+    "ergebnis/composer-normalize": "^2.44",
+    "pestphp/pest": "^2.35",
     "pestphp/pest-plugin-type-coverage": "^2.8",
-    "phpstan/phpstan": "^1.10",
-    "qossmic/deptrac-shim": "^1.0",
-    "rector/rector": "^1.0",
-    "vimeo/psalm": "^5.18",
-    "phpunit/phpunit": "^10.5"
+    "phpstan/phpstan": "^1.12",
+    "phpunit/phpunit": "^10.5 || ^11.0",
+    "rector/rector": "^1.2",
+    "vimeo/psalm": "^5.26"
   },
   "minimum-stability": "dev",
   "prefer-stable": true,
   "autoload": {
+    "files": [
+      "src/Helpers/inertia_helper.php"
+    ],
     "psr-4": {
       "Inertia\\": "src/"
     }
@@ -47,36 +50,32 @@
       "infection/extension-installer": true,
       "pestphp/pest-plugin": true,
       "phpstan/extension-installer": true
-    }
+    },
+    "optimize-autoloader": true,
+    "sort-packages": true
   },
   "scripts": {
-    "post-install-cmd": [
-      "@normalize"
-    ],
     "analyze": [
       "Composer\\Config::disableProcessTimeout",
-      "phpstan analyze",
-      "psalm",
-      "rector process --dry-run",
-      "@unused"
+      "@phpstan",
+      "@psalm",
+      "@rector:check"
     ],
     "ci": [
       "Composer\\Config::disableProcessTimeout",
-      "@cs",
-      "@deduplicate",
-      "@inspect",
+      "@cs:check",
       "@analyze",
-      "@test",
-      "@mutate"
+      "@test"
     ],
-    "cs": "php-cs-fixer fix --ansi --verbose --dry-run --diff",
-    "cs-fix": "php-cs-fixer fix --ansi --verbose --diff",
-    "deduplicate": "phpcpd src/",
-    "inspect": "deptrac analyze --cache-file=build/deptrac.cache",
-    "mutate": "infection --threads=4 --coverage=build/pest --skip-initial-tests --test-framework=pest",
-    "sa": "@analyze",
-    "style": "@cs-fix",
-    "test": "XDEBUG_MODE=coverage pest --coverage",
-    "unused": "composer-unused"
+    "cs:check": "php-cs-fixer fix --ansi --verbose --dry-run --diff",
+    "cs:fix": "php-cs-fixer fix --ansi --verbose --diff",
+    "normalize": "composer normalize --dry-run",
+    "normalize:fix": "composer normalize",
+    "phpstan": "phpstan analyse --ansi",
+    "psalm": "psalm --show-info=true",
+    "rector:check": "rector process --dry-run --ansi",
+    "rector:fix": "rector process --ansi",
+    "test": "pest --colors=always",
+    "test:coverage": "XDEBUG_MODE=coverage pest --coverage --colors=always"
   }
 }

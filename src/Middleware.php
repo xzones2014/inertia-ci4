@@ -11,52 +11,81 @@
 
 namespace Inertia;
 
-use Closure;
 use CodeIgniter\Filters\FilterInterface;
 use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;
 use CodeIgniter\Validation\ValidationInterface;
 use Inertia\Extras\Http;
+use Inertia\Support\Header;
 
 /**
  * @psalm-api
  */
 class Middleware implements FilterInterface
 {
-    public function withVersion(): string|false|null
+    /**
+     * The root view template for Inertia responses.
+     * Override this in your subclass or override rootView() for dynamic resolution.
+     */
+    protected string $rootView = 'app';
+
+    /**
+     * Determines the current asset version.
+     * Override this method to provide custom versioning logic.
+     */
+    public function version(RequestInterface $request): ?string
     {
-        if (file_exists($manifest = './build/manifest.json')) {
-            return md5_file($manifest);
+        $manifests = [
+            FCPATH . 'build/manifest.json',
+            FCPATH . 'mix-manifest.json',
+        ];
+
+        foreach ($manifests as $manifest) {
+            if (file_exists($manifest)) {
+                return hash_file('xxh128', $manifest);
+            }
         }
 
         return null;
     }
 
     /**
-     * @psalm-return array{alert: Closure():?string, errors: Closure():object, flash: Closure():array{success: ?string, error: ?string}}
-     * @return array{alert: Closure():?string, errors: Closure():object, flash: Closure():array{success: ?string, error: ?string}}
+     * Define the props shared by default.
+     * Override this method to add your own shared data.
+     *
+     * @return array<string, mixed>
      */
-    public function withShare(RequestInterface $request): array
+    public function share(RequestInterface $request): array
     {
         return [
-            'alert'  => static fn () => session()->getFlashdata('alert'),
-            'errors' => fn () => $this->resolveValidationErrors($request),
-            'flash'  => static fn () => ['success' => session()->getFlashdata('success'), 'error' => session()->getFlashdata('error')],
+            'errors' => Inertia::always(fn () => $this->resolveValidationErrors($request)),
         ];
+    }
+
+    /**
+     * Resolve the root view for the given request.
+     * Override this method to return a different root view per request.
+     */
+    public function rootView(RequestInterface $request): string
+    {
+        return $this->rootView;
     }
 
     /**
      * @param array<int|string, mixed> $arguments
      */
-    public function before(RequestInterface $request, $arguments = null): void
+    public function before(RequestInterface $request, $arguments = null): RequestInterface|ResponseInterface|string|null
     {
-        Inertia::version(fn () => $this->withVersion());
-        Inertia::share($this->withShare($request));
+        Inertia::version(fn () => $this->version($request));
+        Inertia::share($this->share($request));
+        Inertia::setRootView($this->rootView($request));
+
+        return $request;
     }
 
     /**
-     * Handle the incoming request.
+     * Handle the outgoing response.
      *
      * @param null $arguments
      *
@@ -64,43 +93,48 @@ class Middleware implements FilterInterface
      */
     public function after(RequestInterface $request, ResponseInterface $response, $arguments = null)
     {
-        $response->setHeader('Vary', 'X-Inertia');
+        $response->setHeader('Vary', Header::INERTIA);
 
-        if (!$request->hasHeader('X-Inertia')) {
+        if (! $request->hasHeader(Header::INERTIA)) {
             return $response;
-        }
-
-        if (request()->isCLI()) {
-            return $response;
-        }
-
-        if (request()->is('get') && Http::getHeaderValue('X-Inertia-Version')  !== Inertia::getVersion()) {
-            $response = $this->onVersionChange($request);
-        }
-
-        if ($response->getStatusCode() === $response::HTTP_OK && empty($response->getJSON())) {
-            $response = $this->onEmptyResponse();
         }
 
         if (
-            $response->getStatusCode() === $response::HTTP_FOUND
-            && (request()->is('put') || request()->is('patch') || request()->is('delete'))
+            strtolower($request->getMethod()) === 'get'
+            && Http::getHeaderValue(Header::VERSION, '', $request) !== Inertia::getVersion()
         ) {
-            $response->setStatusCode($response::HTTP_SEE_OTHER);
+            $response = $this->onVersionChange($request, $response);
+        }
+
+        if ($response->getStatusCode() === 200 && empty($response->getJSON())) {
+            $response = $this->onEmptyResponse($request, $response);
+        }
+
+        if (
+            $response->getStatusCode() === 302
+            && in_array(strtoupper($request->getMethod()), ['PUT', 'PATCH', 'DELETE'], true)
+        ) {
+            $response->setStatusCode(303);
         }
 
         return $response;
     }
 
-    private function onEmptyResponse(): RedirectResponse
+    /**
+     * Handle an empty Inertia response by redirecting back.
+     * Override this method to customize the behavior.
+     */
+    public function onEmptyResponse(RequestInterface $request, ResponseInterface $response): RedirectResponse
     {
         return \redirect()->back();
     }
 
-    private function onVersionChange(RequestInterface $request): RedirectResponse|ResponseInterface
+    /**
+     * Handle a version change by forcing a full page reload via location redirect.
+     * Override this method to customize the behavior.
+     */
+    public function onVersionChange(RequestInterface $request, ResponseInterface $response): RedirectResponse|ResponseInterface
     {
-        \session()->regenerate(true);
-
         return Inertia::location($request->getUri());
     }
 
@@ -108,7 +142,7 @@ class Middleware implements FilterInterface
      * Resolves and prepares validation errors in such
      * a way that they are easier to use client-side.
      */
-    private function resolveValidationErrors(RequestInterface $request): object
+    public function resolveValidationErrors(RequestInterface $request): object
     {
         service('session');
 
@@ -117,12 +151,12 @@ class Middleware implements FilterInterface
 
         $errors = session()->getFlashdata('errors') ?? $validation->getErrors();
 
-        if (!$errors) {
+        if (! $errors) {
             return (object) [];
         }
 
-        if ($request->hasHeader('x-inertia-error-bag')) {
-            return (object) [Http::getHeaderValue('x-inertia-error-bag') => $errors];
+        if ($request->hasHeader(Header::ERROR_BAG)) {
+            return (object) [Http::getHeaderValue(Header::ERROR_BAG, '', $request) => $errors];
         }
 
         return (object) $errors;

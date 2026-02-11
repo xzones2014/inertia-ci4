@@ -12,6 +12,7 @@
 namespace Inertia\Extras;
 
 use CodeIgniter\HTTP\RequestInterface;
+use Inertia\Support\Header;
 
 class Http
 {
@@ -19,7 +20,7 @@ class Http
     {
         $request ??= request();
 
-        return $request->hasHeader('X-Inertia');
+        return $request->hasHeader(Header::INERTIA);
     }
 
     /**

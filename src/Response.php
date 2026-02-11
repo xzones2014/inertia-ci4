@@ -11,34 +11,52 @@
 
 namespace Inertia;
 
+use Closure;
 use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;
 use CodeIgniter\View\View;
 use Config\View as ConfigView;
 use Inertia\Extras\Arr;
 use Inertia\Extras\Http;
+use Inertia\Support\Header;
 
 class Response
 {
-    /**
-     * @var array<string, mixed>
-     */
-    protected array $props      = [];
+    use ResolvesCallables;
 
     /**
      * @var array<string, mixed>
      */
-    protected array $viewData   = [];
+    protected array $props = [];
 
-    protected string $version   = '';
+    /**
+     * @var array<string, mixed>
+     */
+    protected array $viewData = [];
+
     protected string $component = '';
+    protected string $rootView  = 'app';
+    protected string $version   = '';
+    protected bool $clearHistory   = false;
+    protected bool $encryptHistory = false;
 
     /**
      * @param array<string, mixed> $props
      */
-    public function __construct(string $component, array $props, string $version = '')
-    {
-        $this->withComponent($component)->with($props)->withVersion($version);
+    public function __construct(
+        string $component,
+        array $props,
+        string $version = '',
+        string $rootView = 'app',
+        bool $encryptHistory = false,
+        bool $clearHistory = false
+    ) {
+        $this->component = $component;
+        $this->props = $props;
+        $this->version = $version;
+        $this->rootView = $rootView;
+        $this->encryptHistory = $encryptHistory;
+        $this->clearHistory = $clearHistory;
     }
 
     /**
@@ -72,35 +90,253 @@ class Response
         return $this;
     }
 
-    public function toResponse(?RequestInterface $request = null): View|ResponseInterface
+    /**
+     * @param array<string, mixed>|string $key
+     * @param mixed                       $value
+     *
+     * @return $this
+     */
+    public function withViewData($key, $value = null): self
+    {
+        if (is_array($key)) {
+            $this->viewData = array_merge($this->viewData, $key);
+        } else {
+            $this->viewData[$key] = $value;
+        }
+
+        return $this;
+    }
+
+    public function toResponse(?RequestInterface $request = null): ResponseInterface|View
     {
         $request ??= request();
 
-        $only = array_filter(explode(',', Http::getHeaderValue('X-Inertia-Partial-Data', '', $request)));
+        $props = $this->resolveProperties($request, $this->props);
 
-        $props = ($only && Http::getHeaderValue('X-Inertia-Partial-Component', '', $request) === $this->component)
-            ? Arr::only($this->props, $only)
-            : $this->props;
-
-        array_walk_recursive($props, static function (&$prop) {
-            $prop = Arr::value($prop);
-        });
-
-        /** @var array{component: string, version: string, url: string, props: array<string, mixed>} */
-        $page = [
-            'component' => $this->component,
-            'props'     => $props,
-            'url'       => $request->getUri()->getPath(),
-            'version'   => $this->version,
-        ];
+        $page = array_merge(
+            [
+                'component'      => $this->component,
+                'props'          => $props,
+                'url'            => $request->getUri()->getPath(),
+                'version'        => $this->version,
+                'clearHistory'   => $this->clearHistory,
+                'encryptHistory' => $this->encryptHistory,
+            ],
+            $this->resolveMergeProps($request),
+            $this->resolveDeferredProps($request),
+        );
 
         if (Http::isInertiaRequest($request)) {
-            return \response()->setJSON($page, true)->setHeader('Vary', 'X-Inertia')->setHeader('X-Inertia', 'true');
+            return \response()->setJSON($page, true)
+                ->setHeader('Vary', Header::INERTIA)
+                ->setHeader(Header::INERTIA, 'true');
         }
 
         $view = new View(new ConfigView(), '');
         $view->setData($this->viewData + ['page' => $page], 'raw');
 
         return $view;
+    }
+
+    /**
+     * Resolve the properties for the response.
+     *
+     * @param array<string, mixed> $props
+     *
+     * @return array<string, mixed>
+     */
+    public function resolveProperties(RequestInterface $request, array $props): array
+    {
+        $props = $this->resolvePartialProperties($props, $request);
+        $props = $this->resolvePropertyInstances($props, $request);
+
+        return $props;
+    }
+
+    /**
+     * Resolve properties for partial requests. Filters properties based on
+     * 'only' and 'except' headers from the client, allowing for selective
+     * data loading to improve performance.
+     *
+     * @param array<string, mixed> $props
+     *
+     * @return array<string, mixed>
+     */
+    public function resolvePartialProperties(array $props, RequestInterface $request): array
+    {
+        if (! $this->isPartial($request)) {
+            return array_filter($props, static function ($prop) {
+                return ! ($prop instanceof IgnoreFirstLoad)
+                    && ! ($prop instanceof Deferrable && $prop->shouldDefer());
+            });
+        }
+
+        $only   = $this->getOnlyProps($request);
+        $except = $this->getExceptProps($request);
+
+        if ($only) {
+            $props = Arr::only($props, $only);
+        }
+
+        if ($except) {
+            foreach ($except as $key) {
+                unset($props[$key]);
+            }
+        }
+
+        // Always include AlwaysProp instances even in partial reloads
+        return $this->resolveAlways($props);
+    }
+
+    /**
+     * Resolve `always` properties that should always be included.
+     *
+     * @param array<string, mixed> $props
+     *
+     * @return array<string, mixed>
+     */
+    public function resolveAlways(array $props): array
+    {
+        $always = array_filter($this->props, static function ($prop) {
+            return $prop instanceof AlwaysProp;
+        });
+
+        return array_merge($always, $props);
+    }
+
+    /**
+     * Resolve all necessary class instances in the given props.
+     *
+     * @param array<string, mixed> $props
+     *
+     * @return array<string, mixed>
+     */
+    public function resolvePropertyInstances(array $props, RequestInterface $request): array
+    {
+        foreach ($props as $key => $value) {
+            if (
+                $value instanceof Closure
+                || $value instanceof LazyProp
+                || $value instanceof OptionalProp
+                || $value instanceof DeferProp
+                || $value instanceof AlwaysProp
+                || $value instanceof MergeProp
+            ) {
+                $value = $this->resolveCallable($value);
+            }
+
+            if (is_array($value)) {
+                $value = $this->resolvePropertyInstances($value, $request);
+            }
+
+            $props[$key] = $value;
+        }
+
+        return $props;
+    }
+
+    /**
+     * Resolve merge props configuration for client-side prop merging.
+     *
+     * @return array<string, mixed>
+     */
+    public function resolveMergeProps(RequestInterface $request): array
+    {
+        $mergeProps = array_filter($this->props, static function ($prop) {
+            return $prop instanceof Mergeable && $prop->shouldMerge();
+        });
+
+        if (empty($mergeProps)) {
+            return [];
+        }
+
+        $result = [];
+
+        $regularMerge = array_keys(array_filter($mergeProps, static function ($prop) {
+            return ! $prop->shouldDeepMerge();
+        }));
+
+        $deepMerge = array_keys(array_filter($mergeProps, static function ($prop) {
+            return $prop->shouldDeepMerge();
+        }));
+
+        if (! empty($regularMerge)) {
+            $result['mergeProps'] = array_values($regularMerge);
+        }
+
+        if (! empty($deepMerge)) {
+            $result['deepMergeProps'] = array_values($deepMerge);
+        }
+
+        return $result;
+    }
+
+    /**
+     * Resolve deferred props configuration for client-side lazy loading.
+     *
+     * @return array<string, mixed>
+     */
+    public function resolveDeferredProps(RequestInterface $request): array
+    {
+        if ($this->isPartial($request)) {
+            return [];
+        }
+
+        $deferred = array_filter($this->props, static function ($prop) {
+            return $prop instanceof Deferrable && $prop->shouldDefer();
+        });
+
+        if (empty($deferred)) {
+            return [];
+        }
+
+        $groups = [];
+
+        foreach ($deferred as $key => $prop) {
+            $group           = $prop->group();
+            $groups[$group][] = $key;
+        }
+
+        return ['deferredProps' => $groups];
+    }
+
+    /**
+     * Determine if this is a partial reload request.
+     */
+    protected function isPartial(RequestInterface $request): bool
+    {
+        return Http::getHeaderValue(Header::PARTIAL_COMPONENT, '', $request) === $this->component;
+    }
+
+    /**
+     * Determine if this is an Inertia request.
+     */
+    protected function isInertia(RequestInterface $request): bool
+    {
+        return Http::isInertiaRequest($request);
+    }
+
+    /**
+     * Get the 'only' props from the request headers.
+     *
+     * @return list<string>|null
+     */
+    protected function getOnlyProps(RequestInterface $request): ?array
+    {
+        $header = Http::getHeaderValue(Header::PARTIAL_ONLY, '', $request);
+
+        return $header ? array_filter(explode(',', $header)) : null;
+    }
+
+    /**
+     * Get the 'except' props from the request headers.
+     *
+     * @return list<string>|null
+     */
+    protected function getExceptProps(RequestInterface $request): ?array
+    {
+        $header = Http::getHeaderValue(Header::PARTIAL_EXCEPT, '', $request);
+
+        return $header ? array_filter(explode(',', $header)) : null;
     }
 }

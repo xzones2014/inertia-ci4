@@ -51,7 +51,7 @@ class HttpGateway implements Gateway
 
         return new Response(
             \implode("\n", $response['head']),
-            $response['body']
+            $response['body'],
         );
     }
 }

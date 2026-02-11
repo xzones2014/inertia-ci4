@@ -6,6 +6,7 @@ parameters:
 	bootstrapFiles:
 		- vendor/codeigniter4/framework/system/Test/bootstrap.php
 	ignoreErrors:
+		- identifier: missingType.generics
 	universalObjectCratesClasses:
 		- CodeIgniter\Entity
 		- CodeIgniter\Entity\Entity
@@ -16,4 +17,4 @@ parameters:
 		- APP_NAMESPACE
 		- CI_DEBUG
 		- ENVIRONMENT
-	checkGenericClassInNonGenericObjectType: false
+

@@ -9,20 +9,15 @@
  * the LICENSE file that was distributed with this source code.
  */
 
-namespace Inertia\Controllers;
-
-use App\Controllers\BaseController;
+namespace Inertia;
 
 /**
- * @psalm-api
+ * Interface for props that can be merged with existing client-side data
+ * during partial reloads.
  */
-class TestController extends BaseController
+interface Mergeable
 {
-    /**
-     * @psalm-api
-     */
-    public function index(): string
-    {
-        return 'ok';
-    }
+    public function shouldMerge(): bool;
+
+    public function shouldDeepMerge(): bool;
 }

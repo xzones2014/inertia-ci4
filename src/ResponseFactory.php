@@ -17,12 +17,18 @@ use CodeIgniter\HTTP\ResponseInterface;
 use CodeIgniter\View\View;
 use Inertia\Extras\Arr;
 use Inertia\Extras\Http;
+use Inertia\Support\Header;
 
 /**
  * @psalm-api
  */
 class ResponseFactory
 {
+    /**
+     * The root view template name.
+     */
+    protected string $rootView = 'app';
+
     /**
      * @var array<string, mixed>
      */
@@ -34,12 +40,32 @@ class ResponseFactory
     protected $version;
 
     /**
+     * Whether the next response should clear the browser history.
+     */
+    protected bool $shouldClearHistory = false;
+
+    /**
+     * Whether the history should be encrypted. Null means use config default.
+     */
+    protected ?bool $encryptHistory = null;
+
+    /**
+     * Set the root view template name.
+     *
+     * @psalm-api
+     */
+    public function setRootView(string $name): void
+    {
+        $this->rootView = $name;
+    }
+
+    /**
      * @param array<string, mixed>|string $key
      * @param mixed                       $value
      *
      * @psalm-api
      */
-    public function share(string|array $key, $value = null): void
+    public function share(array|string $key, $value = null): void
     {
         if (is_array($key)) {
             $this->sharedProps = array_merge($this->sharedProps, $key);
@@ -55,7 +81,7 @@ class ResponseFactory
      *
      * @psalm-api
      */
-    public function getShared(?string $key, $default = null)
+    public function getShared(?string $key = null, $default = null)
     {
         if ($key) {
             return Arr::get($this->sharedProps, $key, $default);
@@ -91,6 +117,93 @@ class ResponseFactory
     }
 
     /**
+     * Mark the next response to clear the browser history.
+     *
+     * @psalm-api
+     */
+    public function clearHistory(): void
+    {
+        $this->shouldClearHistory = true;
+    }
+
+    /**
+     * Enable or disable history encryption for subsequent responses.
+     *
+     * @psalm-api
+     */
+    public function encryptHistory(bool $encrypt = true): void
+    {
+        $this->encryptHistory = $encrypt;
+    }
+
+    /**
+     * Create a lazy (deprecated) prop instance.
+     *
+     * @deprecated Use optional() instead.
+     *
+     * @psalm-api
+     */
+    public function lazy(callable $callback): LazyProp
+    {
+        return new LazyProp($callback);
+    }
+
+    /**
+     * Create an optional prop instance.
+     * Optional props are excluded from the initial page load
+     * and only included when explicitly requested.
+     *
+     * @psalm-api
+     */
+    public function optional(callable $callback): OptionalProp
+    {
+        return new OptionalProp($callback);
+    }
+
+    /**
+     * Create a deferred prop instance.
+     * Deferred props are loaded asynchronously after the initial page load.
+     *
+     * @psalm-api
+     */
+    public function defer(callable $callback, string $group = 'default'): DeferProp
+    {
+        return new DeferProp($callback, $group);
+    }
+
+    /**
+     * Create a merge prop instance.
+     * Merge props are combined with existing client-side data instead of replacing.
+     *
+     * @psalm-api
+     */
+    public function merge(mixed $value): MergeProp
+    {
+        return new MergeProp($value);
+    }
+
+    /**
+     * Create a deep merge prop instance.
+     *
+     * @psalm-api
+     */
+    public function deepMerge(mixed $value): MergeProp
+    {
+        return (new MergeProp($value))->deepMerge();
+    }
+
+    /**
+     * Create an always prop instance.
+     * Always props are included in every response, even during partial reloads.
+     *
+     * @psalm-api
+     */
+    public function always(mixed $value): AlwaysProp
+    {
+        return new AlwaysProp($value);
+    }
+
+    /**
      * @psalm-api
      *
      * @param array<string, mixed> $props
@@ -100,13 +213,24 @@ class ResponseFactory
         /** @var Config\Inertia */
         $config = \config('Inertia');
 
-        $response = (new Response($component, array_merge($this->sharedProps, $props), $this->getVersion()))->toResponse();
+        $response = new Response(
+            $component,
+            array_merge($this->sharedProps, $props),
+            $this->getVersion(),
+            $this->rootView,
+            $this->encryptHistory ?? $config->encryptHistory ?? false,
+            $this->shouldClearHistory,
+        );
 
-        if ($response instanceof View) {
-            return $response->render($config->rootView);
+        $this->shouldClearHistory = false;
+
+        $result = $response->toResponse();
+
+        if ($result instanceof View) {
+            return $result->render($this->rootView);
         }
 
-        return $response->getJSON();
+        return $result->getJSON();
     }
 
     /**
@@ -121,10 +245,10 @@ class ResponseFactory
         if (Http::isInertiaRequest()) {
             session()->set('_ci_previous_url', $url);
 
-            return \response()->setStatusCode(\response()::HTTP_CONFLICT)->setHeader('X-Inertia-Location', $url);
+            return \response()->setStatusCode(409)->setHeader(Header::LOCATION, $url);
         }
 
-        return \redirect()->to($url, \response()::HTTP_SEE_OTHER);
+        return \redirect()->to($url, 303);
     }
 
     /**

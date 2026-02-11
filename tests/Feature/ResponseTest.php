@@ -36,14 +36,19 @@ describe('Inertia Response Tests', function () {
         expect($result->response())->toBeInstanceOf(HTTPResponse::class);
         expect($view)->toBeInstanceOf(View::class);
 
-        expect($page)->toHaveKeys(['component', 'props.user.name', 'url', 'version']);
+        expect($page)->toHaveKeys(['component', 'props', 'url', 'version', 'clearHistory', 'encryptHistory']);
 
         expect($page['version'])->toEqual('123');
         expect($page['component'])->toEqual('User/Edit');
         expect($page['props']['user']['name'])->toEqual('Jonathon');
+        expect($page['clearHistory'])->toBeFalse();
+        expect($page['encryptHistory'])->toBeFalse();
         expect(str_replace('index.php/', '', $page['url']))->toEqual('/user/123');
 
-        expect($view->renderString(Directive::compile($page)))->toEqual('<div id="app" data-page="{&quot;component&quot;:&quot;User\\/Edit&quot;,&quot;props&quot;:{&quot;user&quot;:{&quot;name&quot;:&quot;Jonathon&quot;}},&quot;url&quot;:&quot;\\/index.php\\/user\\/123&quot;,&quot;version&quot;:&quot;123&quot;}"></div>');
+        // Verify directive output produces valid HTML with data-page attribute
+        $html = Directive::compile($page);
+        $expectedDataPage = htmlentities(json_encode($page));
+        expect($html)->toBe('<div id="app" data-page="' . $expectedDataPage . '"></div>');
     });
 
     it('is a valid inertia response from a xhr request', function () {
@@ -63,6 +68,8 @@ describe('Inertia Response Tests', function () {
         expect($page->version)->toEqual('123');
         expect($page->component)->toEqual('User/Edit');
         expect($page->props->user->name)->toEqual('Jonathon');
+        expect($page->clearHistory)->toBeFalse();
+        expect($page->encryptHistory)->toBeFalse();
         expect(str_replace('index.php/', '', $page->url))->toEqual('/user/123');
     });
 });

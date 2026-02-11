@@ -4,21 +4,36 @@ deptrac:
   exclude_files:
     - '#.*test.*#'
   layers:
-    - name: Controller
+    - name: Core
       collectors:
-        - type: className
-          value: .*Controller.*
-    - name: Repository
+        - type: directory
+          value: 'src/'
+        - type: bool
+          must_not:
+            - type: directory
+              value: 'src/Config/.*'
+            - type: directory
+              value: 'src/Ssr/.*'
+            - type: directory
+              value: 'src/Extras/.*'
+    - name: Config
       collectors:
-        - type: className
-          value: .*Repository.*
-    - name: Service
+        - type: directory
+          value: 'src/Config/.*'
+    - name: Ssr
       collectors:
-        - type: className
-          value: .*Service.*
+        - type: directory
+          value: 'src/Ssr/.*'
+    - name: Extras
+      collectors:
+        - type: directory
+          value: 'src/Extras/.*'
   ruleset:
-    Controller:
-      - Service
-    Service:
-      - Repository
-    Repository:
+    Core:
+      - Config
+      - Ssr
+      - Extras
+    Config: []
+    Ssr:
+      - Extras
+    Extras: []

@@ -16,7 +16,8 @@ use Inertia\Ssr\Response;
 
 class Directive
 {
-    protected static ?Response $__inertiaSsr = null;
+    /** @var Response|false|null */
+    protected static $__inertiaSsr = false;
 
     /**
      * @param array{component: string, version: string, url: string, props: array<string, mixed>} $page
@@ -55,10 +56,8 @@ class Directive
      */
     protected static function withSsr(array $page): ?Response
     {
-        if (!isset(static::$__inertiaSsr) && empty(static::$__inertiaSsr)) {
-            $__inertiaSsr = Services::httpGateway()->dispatch($page);
-
-            static::$__inertiaSsr = $__inertiaSsr;
+        if (static::$__inertiaSsr === false) {
+            static::$__inertiaSsr = Services::httpGateway()->dispatch($page);
         }
 
         return static::$__inertiaSsr;

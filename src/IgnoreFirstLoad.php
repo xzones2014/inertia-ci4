@@ -9,20 +9,12 @@
  * the LICENSE file that was distributed with this source code.
  */
 
-namespace Inertia\Controllers;
-
-use App\Controllers\BaseController;
+namespace Inertia;
 
 /**
- * @psalm-api
+ * Marker interface for props that should be excluded from the initial page load.
+ * These props are only resolved when explicitly requested via partial reloads.
  */
-class TestController extends BaseController
+interface IgnoreFirstLoad
 {
-    /**
-     * @psalm-api
-     */
-    public function index(): string
-    {
-        return 'ok';
-    }
 }
