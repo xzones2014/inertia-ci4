@@ -12,7 +12,7 @@ Supports the **Inertia.js v2** protocol including deferred props, merge props, h
 ## Installation
 
 ```shell
-composer require fabithub/inertia-ci4
+composer require xzones2014/inertia-ci4
 ```
 
 ## Setup
