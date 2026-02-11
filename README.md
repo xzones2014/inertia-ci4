@@ -11,8 +11,35 @@ Supports the **Inertia.js v2** protocol including deferred props, merge props, h
 
 ## Installation
 
+### Via Packagist (when published)
+
 ```shell
 composer require xzones2014/inertia-ci4
+```
+
+### Via GitHub (development)
+
+Add the repository to your project's `composer.json`:
+
+```json
+{
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/xzones2014/inertia-ci4"
+        }
+    ]
+}
+```
+
+Then install:
+
+```shell
+# Tagged release
+composer require xzones2014/inertia-ci4:^0.1
+
+# Or latest from develop branch
+composer require xzones2014/inertia-ci4:dev-develop
 ```
 
 ## Setup
