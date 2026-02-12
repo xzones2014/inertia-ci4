@@ -33,6 +33,8 @@ class Middleware implements FilterInterface
     /**
      * Determines the current asset version.
      * Override this method to provide custom versioning logic.
+     *
+     * @psalm-suppress PossiblyUnusedParam
      */
     public function version(RequestInterface $request): ?string
     {
@@ -66,6 +68,8 @@ class Middleware implements FilterInterface
     /**
      * Resolve the root view for the given request.
      * Override this method to return a different root view per request.
+     *
+     * @psalm-suppress PossiblyUnusedParam
      */
     public function rootView(RequestInterface $request): string
     {
@@ -87,7 +91,7 @@ class Middleware implements FilterInterface
     /**
      * Handle the outgoing response.
      *
-     * @param null $arguments
+     * @param mixed|null $arguments
      *
      * @return mixed
      */
@@ -95,7 +99,7 @@ class Middleware implements FilterInterface
     {
         $response->setHeader('Vary', Header::INERTIA);
 
-        if (! $request->hasHeader(Header::INERTIA)) {
+        if (!$request->hasHeader(Header::INERTIA)) {
             return $response;
         }
 
@@ -123,6 +127,8 @@ class Middleware implements FilterInterface
     /**
      * Handle an empty Inertia response by redirecting back.
      * Override this method to customize the behavior.
+     *
+     * @psalm-suppress PossiblyUnusedParam
      */
     public function onEmptyResponse(RequestInterface $request, ResponseInterface $response): RedirectResponse
     {
@@ -132,6 +138,8 @@ class Middleware implements FilterInterface
     /**
      * Handle a version change by forcing a full page reload via location redirect.
      * Override this method to customize the behavior.
+     *
+     * @psalm-suppress PossiblyUnusedParam
      */
     public function onVersionChange(RequestInterface $request, ResponseInterface $response): RedirectResponse|ResponseInterface
     {
@@ -151,7 +159,7 @@ class Middleware implements FilterInterface
 
         $errors = session()->getFlashdata('errors') ?? $validation->getErrors();
 
-        if (! $errors) {
+        if (!$errors) {
             return (object) [];
         }
 

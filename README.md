@@ -343,6 +343,67 @@ public function version(RequestInterface $request): ?string
 composer test
 ```
 
+## Test Coverage Comparison with inertia-laravel
+
+This table compares the test areas available in [inertiajs/inertia-laravel](https://github.com/inertiajs/inertia-laravel/tree/2.x/tests) (the official Laravel adapter) with what has been ported or equivalently covered in this CodeIgniter 4 adapter.
+
+### Summary
+
+| Metric | inertia-laravel (2.x) | inertia-ci4 |
+|---|---|---|
+| Test files | 18 | 16 |
+| Test methods | ~230 | 212 |
+| Assertions | — | 344 |
+
+### Test File Comparison
+
+| Test Area | inertia-laravel | inertia-ci4 | Status |
+|---|---|---|---|
+| **Response** | `ResponseTest.php` (59 tests) | `Unit/ResponseTest.php` (30 tests) | ✅ Ported (core scenarios) |
+| **ResponseFactory** | `ResponseFactoryTest.php` (42 tests) | `Unit/ResponseFactoryTest.php` (24 tests) + `Unit/ResponseFactoryRenderTest.php` (13 tests) | ✅ Ported |
+| **Middleware** | `MiddlewareTest.php` (23 tests) | `Unit/MiddlewareTest.php` (9 tests) + `Unit/MiddlewareLifecycleTest.php` (18 tests) | ✅ Ported |
+| **Directive** | `DirectiveTest.php` (8 tests) | `Unit/DirectiveTest.php` (8 tests) | ✅ Fully ported |
+| **Helper functions** | `HelperTest.php` (3 tests) | `Unit/HelperTest.php` (6 tests) | ✅ Fully ported |
+| **History (encrypt/clear)** | `HistoryTest.php` (8 tests) | Covered across `EncryptHistoryMiddlewareTest`, `ResponseFactoryTest`, `ResponseTest` | ✅ Ported (distributed) |
+| **AlwaysProp** | `AlwaysPropTest.php` (5 tests) | `Unit/PropTypesTest.php` (AlwaysProp section) | ✅ Ported |
+| **LazyProp** | `LazyPropTest.php` (3 tests) | `Unit/PropTypesTest.php` (LazyProp section) | ✅ Ported |
+| **OptionalProp** | `OptionalPropTest.php` (4 tests) | `Unit/PropTypesTest.php` (OptionalProp section) | ✅ Ported |
+| **DeferProp** | `DeferPropTest.php` (5 tests) | `Unit/PropTypesTest.php` (DeferProp section, 8 tests) | ✅ Ported |
+| **MergeProp** | `MergePropTest.php` (10+ tests) | `Unit/PropTypesTest.php` (MergeProp section, 6 tests) | ✅ Ported (core) |
+| **EncryptHistoryMiddleware** | Tested within `HistoryTest.php` | `Unit/EncryptHistoryMiddlewareTest.php` (4 tests) | ✅ Ported |
+| **Inertia Facade** | Tested across multiple files | `Unit/InertiaFacadeTest.php` (16 tests) | ✅ Ported |
+| **Header constants** | — | `Unit/HeaderTest.php` (8 tests) | ✅ CI4-specific |
+| **Http utilities** | — | `Unit/HttpTest.php` (8 tests) | ✅ CI4-specific |
+| **Arr utilities** | — | `Unit/ArrTest.php` (24 tests) | ✅ CI4-specific |
+| **SSR Response DTO** | — | `Unit/SsrResponseTest.php` (2 tests) | ✅ CI4-specific |
+| **Config & Services** | — | `Unit/ConfigTest.php` (6 tests) | ✅ CI4-specific |
+| **Controller** | `ControllerTest.php` (1 test) | `Feature/ControllerTest.php` (1 test) | ✅ Ported |
+| **Feature Response** | — | `Feature/ResponseTest.php` | ✅ CI4-specific |
+| **ServiceProvider** | `ServiceProviderTest.php` (3 tests) | — | ⬜ N/A (Laravel-specific) |
+| **DeepMergeProp** | `DeepMergePropTest.php` (4 tests) | — | ⬜ N/A (not in CI4 adapter) |
+| **ScrollProp** | `ScrollPropTest.php` (9 tests) | — | ⬜ N/A (not in CI4 adapter) |
+| **ScrollMetadata** | `ScrollMetadataTest.php` (4 tests) | — | ⬜ N/A (not in CI4 adapter) |
+| **OnceProp** | `OncePropTest.php` (7 tests) | — | ⬜ N/A (not in CI4 adapter) |
+| **SSR HttpGateway** | `HttpGatewayTest.php` (7 tests) | — | 🔲 Not yet ported |
+| **SSR Artisan Command** | `Commands/CheckSsrTest.php` (3 tests) | — | ⬜ N/A (Laravel Artisan) |
+| **Testing utilities** | `Testing/AssertableInertiaTest.php` (21 tests) | — | ⬜ N/A (Laravel TestResponse) |
+| **Testing macros** | `Testing/TestResponseMacrosTest.php` (5 tests) | — | ⬜ N/A (Laravel TestResponse) |
+
+### Legend
+
+| Symbol | Meaning |
+|---|---|
+| ✅ | Ported or equivalently covered |
+| ⬜ | Not applicable — feature doesn't exist in CI4 adapter or is Laravel-specific |
+| 🔲 | Feature exists in CI4 adapter but test not yet ported |
+
+### Notes
+
+- **inertia-laravel** tests are written with PHPUnit and use Laravel's full HTTP testing stack (`$this->get()`, `assertInertia()`, etc.). **inertia-ci4** tests use [Pest PHP](https://pestphp.com/) with `describe`/`it` syntax and test components in isolation.
+- Tests marked **N/A** cover Laravel-specific features (Blade directives via Blade compiler, Eloquent resources, service providers, Artisan commands, `TestResponse` macros) or prop types (`ScrollProp`, `OnceProp`, `DeepMergeProp`) not yet implemented in this adapter.
+- The **SSR HttpGateway** exists in this adapter (`src/Ssr/HttpGateway.php`) but its tests require mocking external HTTP calls and are not yet ported.
+- Several inertia-laravel **ResponseTest** scenarios (Eloquent resources, Arrayable props, macros, paginator responses, proxy prefix URLs) are Laravel-specific and have no CI4 equivalent.
+
 ## Upgrading from v0.0.x — Breaking Changes
 
 If you are upgrading from a previous version, the following breaking changes require updates to your code.

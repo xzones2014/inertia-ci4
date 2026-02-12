@@ -16,7 +16,9 @@ use Inertia\Ssr\Response;
 
 class Directive
 {
-    /** @var Response|false|null */
+    /**
+     * @var false|Response|null
+     */
     protected static $__inertiaSsr = false;
 
     /**

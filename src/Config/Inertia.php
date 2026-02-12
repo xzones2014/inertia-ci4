@@ -13,6 +13,9 @@ namespace Inertia\Config;
 
 use CodeIgniter\Config\BaseConfig;
 
+/**
+ * @psalm-api
+ */
 class Inertia extends BaseConfig
 {
     public string $rootView   = 'app';

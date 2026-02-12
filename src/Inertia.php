@@ -20,23 +20,23 @@ use Inertia\Config\Services;
 /**
  * Inertia.
  *
+ * @method static AlwaysProp                         always(mixed $value)
+ * @method static void                               clearHistory()
+ * @method static MergeProp                          deepMerge(mixed $value)
+ * @method static DeferProp                          defer(callable $callback, string $group = 'default')
+ * @method static void                               encryptHistory(bool $encrypt = true)
+ * @method static void                               flushShared()
+ * @method static mixed                              getShared(?string $key = null, $default = null)
+ * @method static string                             getVersion()
+ * @method static string                             init(array $page, bool $isHead = false)
+ * @method static LazyProp                           lazy(callable $callback)
+ * @method static RedirectResponse|ResponseInterface location(RequestInterface|string $url)
+ * @method static MergeProp                          merge(mixed $value)
+ * @method static OptionalProp                       optional(callable $callback)
+ * @method static string                             render(string $component, array $props = [])
  * @method static void                               setRootView(string $name)
  * @method static void                               share(string|array $key, $value = null)
- * @method static mixed                              getShared(?string $key = null, $default = null)
- * @method static void                               flushShared()
  * @method static void                               version(Closure|string|null $version)
- * @method static string                             getVersion()
- * @method static void                               clearHistory()
- * @method static void                               encryptHistory(bool $encrypt = true)
- * @method static LazyProp                           lazy(callable $callback)
- * @method static OptionalProp                       optional(callable $callback)
- * @method static DeferProp                          defer(callable $callback, string $group = 'default')
- * @method static MergeProp                          merge(mixed $value)
- * @method static MergeProp                          deepMerge(mixed $value)
- * @method static AlwaysProp                         always(mixed $value)
- * @method static string                             render(string $component, array $props = [])
- * @method static RedirectResponse|ResponseInterface location(RequestInterface|string $url)
- * @method static string                             init(array $page, bool $isHead = false)
  *
  * @see ResponseFactory
  */

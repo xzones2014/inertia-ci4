@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit;
 
+use ReflectionProperty;
 use Inertia\AlwaysProp;
 use Inertia\DeferProp;
 use Inertia\LazyProp;
@@ -177,7 +178,7 @@ describe('ResponseFactory Prop Factories', function () {
 describe('ResponseFactory History', function () {
     it('defaults shouldClearHistory to false', function () {
         $factory = new ResponseFactory();
-        $ref     = new \ReflectionProperty($factory, 'shouldClearHistory');
+        $ref     = new ReflectionProperty($factory, 'shouldClearHistory');
 
         expect($ref->getValue($factory))->toBeFalse();
     });
@@ -186,14 +187,14 @@ describe('ResponseFactory History', function () {
         $factory = new ResponseFactory();
         $factory->clearHistory();
 
-        $ref = new \ReflectionProperty($factory, 'shouldClearHistory');
+        $ref = new ReflectionProperty($factory, 'shouldClearHistory');
 
         expect($ref->getValue($factory))->toBeTrue();
     });
 
     it('defaults encryptHistory to null', function () {
         $factory = new ResponseFactory();
-        $ref     = new \ReflectionProperty($factory, 'encryptHistory');
+        $ref     = new ReflectionProperty($factory, 'encryptHistory');
 
         expect($ref->getValue($factory))->toBeNull();
     });
@@ -202,7 +203,7 @@ describe('ResponseFactory History', function () {
         $factory = new ResponseFactory();
         $factory->encryptHistory();
 
-        $ref = new \ReflectionProperty($factory, 'encryptHistory');
+        $ref = new ReflectionProperty($factory, 'encryptHistory');
 
         expect($ref->getValue($factory))->toBeTrue();
     });
@@ -212,7 +213,7 @@ describe('ResponseFactory History', function () {
         $factory->encryptHistory(true);
         $factory->encryptHistory(false);
 
-        $ref = new \ReflectionProperty($factory, 'encryptHistory');
+        $ref = new ReflectionProperty($factory, 'encryptHistory');
 
         expect($ref->getValue($factory))->toBeFalse();
     });
@@ -224,7 +225,7 @@ describe('ResponseFactory History', function () {
 describe('ResponseFactory Root View', function () {
     it('defaults root view to app', function () {
         $factory = new ResponseFactory();
-        $ref     = new \ReflectionProperty($factory, 'rootView');
+        $ref     = new ReflectionProperty($factory, 'rootView');
 
         expect($ref->getValue($factory))->toBe('app');
     });
@@ -233,7 +234,7 @@ describe('ResponseFactory Root View', function () {
         $factory = new ResponseFactory();
         $factory->setRootView('admin');
 
-        $ref = new \ReflectionProperty($factory, 'rootView');
+        $ref = new ReflectionProperty($factory, 'rootView');
 
         expect($ref->getValue($factory))->toBe('admin');
     });

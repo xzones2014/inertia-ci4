@@ -29,7 +29,7 @@ trait ResolvesCallables
             return $callable();
         }
 
-        if (is_callable($callable) && ! is_string($callable)) {
+        if (is_callable($callable) && !is_string($callable)) {
             return $callable();
         }
 

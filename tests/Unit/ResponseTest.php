@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit;
 
+use CodeIgniter\HTTP\ResponseInterface;
 use CodeIgniter\HTTP\IncomingRequest;
 use CodeIgniter\HTTP\URI;
 use CodeIgniter\HTTP\UserAgent;
@@ -460,7 +461,7 @@ describe('Inertia XHR Response', function () {
 
         $result = $response->toResponse($request);
 
-        expect($result)->toBeInstanceOf(\CodeIgniter\HTTP\ResponseInterface::class);
+        expect($result)->toBeInstanceOf(ResponseInterface::class);
         expect($result->hasHeader('X-Inertia'))->toBeTrue();
         expect($result->hasHeader('Vary'))->toBeTrue();
 

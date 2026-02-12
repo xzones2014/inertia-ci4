@@ -20,6 +20,9 @@ use Inertia\Extras\Arr;
 use Inertia\Extras\Http;
 use Inertia\Support\Header;
 
+/**
+ * @psalm-api
+ */
 class Response
 {
     use ResolvesCallables;
@@ -49,7 +52,7 @@ class Response
         string $version = '',
         string $rootView = 'app',
         bool $encryptHistory = false,
-        bool $clearHistory = false
+        bool $clearHistory = false,
     ) {
         $this->component = $component;
         $this->props = $props;
@@ -64,6 +67,8 @@ class Response
      * @param mixed                       $value
      *
      * @return $this
+     *
+     * @psalm-suppress PossiblyUnusedMethod
      */
     public function with($key, $value = null): self
     {
@@ -76,6 +81,9 @@ class Response
         return $this;
     }
 
+    /**
+     * @psalm-suppress PossiblyUnusedMethod
+     */
     public function withComponent(string $component): static
     {
         $this->component = $component;
@@ -83,6 +91,9 @@ class Response
         return $this;
     }
 
+    /**
+     * @psalm-suppress PossiblyUnusedMethod
+     */
     public function withVersion(string $version): static
     {
         $this->version = $version;
@@ -95,6 +106,8 @@ class Response
      * @param mixed                       $value
      *
      * @return $this
+     *
+     * @psalm-suppress PossiblyUnusedMethod
      */
     public function withViewData($key, $value = null): self
     {
@@ -148,9 +161,8 @@ class Response
     public function resolveProperties(RequestInterface $request, array $props): array
     {
         $props = $this->resolvePartialProperties($props, $request);
-        $props = $this->resolvePropertyInstances($props, $request);
 
-        return $props;
+        return $this->resolvePropertyInstances($props, $request);
     }
 
     /**
@@ -164,11 +176,9 @@ class Response
      */
     public function resolvePartialProperties(array $props, RequestInterface $request): array
     {
-        if (! $this->isPartial($request)) {
-            return array_filter($props, static function ($prop) {
-                return ! ($prop instanceof IgnoreFirstLoad)
-                    && ! ($prop instanceof Deferrable && $prop->shouldDefer());
-            });
+        if (!$this->isPartial($request)) {
+            return array_filter($props, static fn ($prop) => !($prop instanceof IgnoreFirstLoad)
+                    && !($prop instanceof Deferrable && $prop->shouldDefer()));
         }
 
         $only   = $this->getOnlyProps($request);
@@ -197,9 +207,7 @@ class Response
      */
     public function resolveAlways(array $props): array
     {
-        $always = array_filter($this->props, static function ($prop) {
-            return $prop instanceof AlwaysProp;
-        });
+        $always = array_filter($this->props, static fn ($prop) => $prop instanceof AlwaysProp);
 
         return array_merge($always, $props);
     }
@@ -239,12 +247,12 @@ class Response
      * Resolve merge props configuration for client-side prop merging.
      *
      * @return array<string, mixed>
+     *
+     * @psalm-suppress PossiblyUnusedParam
      */
     public function resolveMergeProps(RequestInterface $request): array
     {
-        $mergeProps = array_filter($this->props, static function ($prop) {
-            return $prop instanceof Mergeable && $prop->shouldMerge();
-        });
+        $mergeProps = array_filter($this->props, static fn ($prop) => $prop instanceof Mergeable && $prop->shouldMerge());
 
         if (empty($mergeProps)) {
             return [];
@@ -252,19 +260,15 @@ class Response
 
         $result = [];
 
-        $regularMerge = array_keys(array_filter($mergeProps, static function ($prop) {
-            return ! $prop->shouldDeepMerge();
-        }));
+        $regularMerge = array_keys(array_filter($mergeProps, static fn ($prop) => !$prop->shouldDeepMerge()));
 
-        $deepMerge = array_keys(array_filter($mergeProps, static function ($prop) {
-            return $prop->shouldDeepMerge();
-        }));
+        $deepMerge = array_keys(array_filter($mergeProps, static fn ($prop) => $prop->shouldDeepMerge()));
 
-        if (! empty($regularMerge)) {
+        if (!empty($regularMerge)) {
             $result['mergeProps'] = array_values($regularMerge);
         }
 
-        if (! empty($deepMerge)) {
+        if (!empty($deepMerge)) {
             $result['deepMergeProps'] = array_values($deepMerge);
         }
 
@@ -282,9 +286,7 @@ class Response
             return [];
         }
 
-        $deferred = array_filter($this->props, static function ($prop) {
-            return $prop instanceof Deferrable && $prop->shouldDefer();
-        });
+        $deferred = array_filter($this->props, static fn ($prop) => $prop instanceof Deferrable && $prop->shouldDefer());
 
         if (empty($deferred)) {
             return [];
@@ -310,6 +312,8 @@ class Response
 
     /**
      * Determine if this is an Inertia request.
+     *
+     * @psalm-suppress PossiblyUnusedMethod
      */
     protected function isInertia(RequestInterface $request): bool
     {

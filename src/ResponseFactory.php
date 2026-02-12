@@ -32,7 +32,7 @@ class ResponseFactory
     /**
      * @var array<string, mixed>
      */
-    protected $sharedProps = [];
+    protected array $sharedProps = [];
 
     /**
      * @var Closure|string|null
